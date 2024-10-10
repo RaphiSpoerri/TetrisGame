@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Tetris</title>
+    <meta name="viewport" content="width=device-width, user-scalable=no">
+    <link href="https://fonts.googleapis.com/css?family=Orbitron" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Press Start 2P" rel="stylesheet">
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+	  <!-- I'm using a braille space(10240), to 
+				prevent the space after the colon from being removed -->
+    <div id="score-disp">Score: <span id="score">0</span>;
+      <span style="color:red;" id="end"></span>
+    </div>
+    <svg id="screen" width="150" height="330">
+    </svg>
+    <svg id="arrow" width="150" height="15"
+         style="position:absolute;left: 8px;border: 1px solid black;margin-top: -15px;">
+      <rect id="ptr" height="15" width="15"/></svg>
+    <div style="float: right;" id="instructions">
+      <ul>
+        <li>click/press <kbd>&uparrow;</kbd> to rotate the shape</li>
+        <li>click/press <kbd>&rightarrow;</kbd> and <kbd>&leftarrow;</kbd> to move the shape</li>
+				<li>on a computer, press <kbd>&downarrow;</kbd> to make the shape fall faster</li>
+        <li>click/press <kbd>f</kbd> to flip the shape (only works for
+          <svg width="55" height="10" style="margin-left: -2px;">
+            <rect width="15" height="5" fill="maroon" y="5"/>
+            <rect width="5" height="5" fill="maroon" x="10"/>
+            <text height="5" width="5" y="10" x="22.5" >&amp;</text>
+            <rect width="10" height="5" fill="#000056" y="5" x="40"/>
+            <rect width="10" height="5" fill="#000056" x="45"/>
+            <rect width="3" height="3" fill="red" y="6" x="1"/>
+            <rect width="3" height="3" fill="red" y="6" x="6"/>
+            <rect width="3" height="3" fill="red" y="6" x="11"/>
+            <rect width="3" height="3" fill="red" y="1" x="11"/>
+            <rect width="3" height="3" fill="blue" y="6" x="46"/>
+            <rect width="3" height="3" fill="blue" y="6" x="41"/>
+            <rect width="3" height="3" fill="blue" y="1" x="46"/>
+            <rect width="3" height="3" fill="blue" y="1" x="51"/>
+          </svg>)
+        </li>
+        <li>have fun!</li>
+      </ul>
+
+    <button id="up" style="margin-left: 30px;">&uparrow;</button><br/>
+    <button id="left" style="margin: 0px;">&leftarrow;</button>
+    <button id="right" style="margin-left: 22px;">&rightarrow;</button>
+    <button id="f" style="font-family: monospace;margin-left: -7px;margin-top: 5px;">f</button>
+    </div>
+		<div>
+			<button onclick="run();" id="go">Play</button>
+			<label>speed: (seconds)</label>
+			<span id="show-speed">1.0</span>&#10240;<button id="reset-speed" 
+							onclick="document.getElementById('set-speed').value = 2.1; document.getElementById('set-speed').onchange();">reset speed</button>
+			<input
+            id="set-speed"
+						type="range"
+						min="0.1"
+						max="3"
+						step="0.1"
+						value="2"
+						class="slider"
+						onchange="document.getElementById('show-speed').innerHTML =(3.1-document.getElementsByTagName('input')[0].value + '.0').slice(0, 3); speed = (document.getElementById('show-speed').innerHTML) * 1000;"
+						/><br/>
+			
+		</div>
+    <script>
+
+      Array.prototype.repeat = function(times) {
+        var ret = [];
+        while(times--) {
+          ret.push(...this);
+        }
+        return ret;
+      }
+      // "_from" because "from" is a reserved word
+      const randint = (_from, to) => {
+        const difference = to - _from + 1;
+        const piece = 1 / difference;
+        return _from + Math.floor(Math.random() / piece);
+      };
+          
+      const sleep = (ms) => {
+        return new Promise((resolve, reject) => setTimeout(resolve, ms));
+      };
+      const GAME_DATA = {
+        speed: 1000,
+        backupSpeed: 1000,
+        currentShape: null,
+        screen: null
+      };
+      const pointer = document.getElementById("ptr");
+      const SVG = document.getElementsByTagName("svg")[0];
+      const END = document.getElementById("end");
+      document.getElementById('arrow').style.top = `${15 * 26.4}px`;
+      
+    </script>
+    <script src="./pixel-template.js"></script>
+    <script src="./matrix_100x220.js"></script>
+    <script>
+      const COLORS =[
+        ["#ff0000","#df0000"], ["#ff8000","#df6000"],
+        ["#ffff00","#dfdf00"], ["#80ff00","#60df00"],
+        ["#00ff00","#00df00"], ["#00ff80","#00df60"],
+        ["#00ffff","#00dfdf"], ["#0080ff","#0060df"],
+        ["#0000ff","#0000df"], ["#8000ff","#6000df"],
+        ["#ff00ff","#df00df"], ["#ff0080","#df0060"]
+      ];
+
+      const updateMinos = () => {
+        const shape = GAME_DATA.currentShape;
+        var x_poses = shape.getMinos().map(m => m.x);
+        var min = Math.min(...x_poses);
+        var max = Math.max(...x_poses);
+        var difference = max - min + 1;
+        pointer.setAttribute('width', `${difference * 15}`);
+        pointer.setAttribute('x', (min - 1) * 15);
+      };
+      const moveRight = () => {
+        if (END.innerHTML == "GAME OVER") return;
+
+        const minos = GAME_DATA.currentShape.getMinos();
+        for (const mino of minos)
+          if (mino.x == 10)
+            return;
+        GAME_DATA.currentShape.moveMinos(1);
+        updateMinos();
+      };
+
+      const moveLeft = () => {
+        if (END.innerHTML == "GAME OVER") return;
+        const minos = GAME_DATA.currentShape.getMinos();
+        for (const mino of minos)
+          if (mino.x == 1)
+            return;
+        GAME_DATA.currentShape.moveMinos(-1);
+        updateMinos();
+      };
+
+      const flipIfPossible = () => {
+        if (END.innerHTML === "GAME OVER"
+          || GAME_DATA.currentShape.flip === undefined) return;
+        GAME_DATA.currentShape.flip();
+        updateMinos();
+      };
+  </script>
+  <script src="./shape/square.js"></script>
+  <script src="./shape/rectangle.js"></script>
+  <script src="./shape/mountain.js"></script>
+  <script src="./shape/bracket.js"></script>
+  <script src="./shape/stairs.js"></script>
+  <script src="./script.js"></script>
+  </body>
+</html>
